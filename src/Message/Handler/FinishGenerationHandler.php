@@ -6,7 +6,7 @@ namespace Setono\SyliusFeedPlugin\Message\Handler;
 
 use Doctrine\Persistence\ObjectManager;
 use InvalidArgumentException;
-use League\Flysystem\FilesystemInterface;
+use League\Flysystem\FilesystemOperator;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Setono\SyliusFeedPlugin\FeedType\FeedTypeInterface;
@@ -32,7 +32,7 @@ final class FinishGenerationHandler implements MessageHandlerInterface
 
     private ObjectManager $feedManager;
 
-    private FilesystemInterface $filesystem;
+    private FilesystemOperator $filesystem;
 
     private Registry $workflowRegistry;
 
@@ -47,7 +47,7 @@ final class FinishGenerationHandler implements MessageHandlerInterface
     public function __construct(
         FeedRepositoryInterface $feedRepository,
         ObjectManager $feedManager,
-        FilesystemInterface $filesystem,
+        FilesystemOperator $filesystem,
         Registry $workflowRegistry,
         Environment $twig,
         FeedTypeRegistryInterface $feedTypeRegistry,
@@ -95,15 +95,11 @@ final class FinishGenerationHandler implements MessageHandlerInterface
                     $files = $this->filesystem->listContents((string) $dir);
                     /** @var array{basename: string, path: string} $file */
                     foreach ($files as $file) {
-                        Assert::isArray($file);
-                        Assert::keyExists($file, 'basename');
-                        Assert::keyExists($file, 'path');
-
                         if (TemporaryFeedPathGenerator::BASE_FILENAME === $file['basename']) {
                             continue;
                         }
 
-                        $fp = $this->filesystem->readStream($file['path']);
+                        $fp = $this->filesystem->readStream($file->path());
                         if (false === $fp) {
                             throw new \RuntimeException(sprintf(
                                 'The file "%s" could not be opened as a resource',
@@ -122,14 +118,10 @@ final class FinishGenerationHandler implements MessageHandlerInterface
 
                     fwrite($batchStream, $feedEnd);
 
-                    $res = $this->filesystem->writeStream((string) TemporaryFeedPathGenerator::getBaseFile($dir), $batchStream);
+                    $this->filesystem->writeStream((string) TemporaryFeedPathGenerator::getBaseFile($dir), $batchStream);
 
                     // tries to close the file pointer although it may already have been closed by flysystem
                     fclose($batchStream);
-
-                    if (false === $res) {
-                        throw new RuntimeException('An error occurred when trying to write the finished feed write');
-                    }
                 }
             }
 

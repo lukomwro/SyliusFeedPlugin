@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace Setono\SyliusFeedPlugin\EventListener;
 
-use League\Flysystem\FileNotFoundException;
-use League\Flysystem\FilesystemInterface;
-use RuntimeException;
+use League\Flysystem\FilesystemOperator;
+use League\Flysystem\UnableToDeleteFile;
 use Setono\SyliusFeedPlugin\Generator\FeedPathGeneratorInterface;
 use Setono\SyliusFeedPlugin\Generator\TemporaryFeedPathGenerator;
 use Setono\SyliusFeedPlugin\Model\FeedInterface;
@@ -17,17 +16,17 @@ use Symfony\Component\Workflow\Event\TransitionEvent;
 
 final class MoveGeneratedFeedSubscriber implements EventSubscriberInterface
 {
-    private FilesystemInterface $temporaryFilesystem;
+    private FilesystemOperator $temporaryFilesystem;
 
-    private FilesystemInterface $filesystem;
+    private FilesystemOperator $filesystem;
 
     private FeedPathGeneratorInterface $temporaryFeedPathGenerator;
 
     private FeedPathGeneratorInterface $feedPathGenerator;
 
     public function __construct(
-        FilesystemInterface $temporaryFilesystem,
-        FilesystemInterface $filesystem,
+        FilesystemOperator $temporaryFilesystem,
+        FilesystemOperator $filesystem,
         FeedPathGeneratorInterface $temporaryFeedPathGenerator,
         FeedPathGeneratorInterface $feedPathGenerator
     ) {
@@ -78,18 +77,14 @@ final class MoveGeneratedFeedSubscriber implements EventSubscriberInterface
                     (string) $locale->getCode()
                 );
                 $path = sprintf('%s/%s', $newPath->getPath(), uniqid('feed-', true));
-                $res = $this->filesystem->writeStream($path, $tempFile);
-
-                if (false === $res) {
-                    throw new RuntimeException('An error occurred when trying to write the feed to the filesystem');
-                }
+                $this->filesystem->writeStream($path, $tempFile);
 
                 try {
                     $this->filesystem->delete((string) $newPath);
-                } catch (FileNotFoundException $e) {
+                } catch (UnableToDeleteFile $e) {
                 }
 
-                $this->filesystem->rename($path, (string) $newPath);
+                $this->filesystem->move($path, (string) $newPath);
 
                 $this->temporaryFilesystem->delete((string) $temporaryPath);
             }
