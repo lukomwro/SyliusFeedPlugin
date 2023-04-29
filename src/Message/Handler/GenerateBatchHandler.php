@@ -206,11 +206,9 @@ final class GenerateBatchHandler implements MessageHandlerInterface
             $dir = $this->temporaryFeedPathGenerator->generate($feed, (string) $channel->getCode(), (string) $locale->getCode());
             $path = TemporaryFeedPathGenerator::getPartialFile($dir, $this->filesystem);
 
-            $res = $this->filesystem->writeStream((string) $path, $stream);
+            $this->filesystem->writeStream((string) $path, $stream);
 
             fclose($stream);
-
-            Assert::true($res, 'An error occurred when trying to write a feed item');
 
             $this->feedManager->flush();
             $this->feedManager->clear();

@@ -95,7 +95,7 @@ final class FinishGenerationHandler implements MessageHandlerInterface
                     $files = $this->filesystem->listContents((string) $dir);
                     /** @var array{basename: string, path: string} $file */
                     foreach ($files as $file) {
-                        if (TemporaryFeedPathGenerator::BASE_FILENAME === $file['basename']) {
+                        if (TemporaryFeedPathGenerator::BASE_FILENAME === $file->path()) {
                             continue;
                         }
 
@@ -103,7 +103,7 @@ final class FinishGenerationHandler implements MessageHandlerInterface
                         if (false === $fp) {
                             throw new \RuntimeException(sprintf(
                                 'The file "%s" could not be opened as a resource',
-                                $file['path']
+                                $file->path()
                             ));
                         }
 
@@ -113,7 +113,7 @@ final class FinishGenerationHandler implements MessageHandlerInterface
 
                         fclose($fp);
 
-                        $this->filesystem->delete($file['path']);
+                        $this->filesystem->delete($file->path());
                     }
 
                     fwrite($batchStream, $feedEnd);
