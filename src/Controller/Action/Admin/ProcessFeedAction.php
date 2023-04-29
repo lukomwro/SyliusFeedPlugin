@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Setono\SyliusFeedPlugin\Controller\Action\Admin;
 
 use Setono\SyliusFeedPlugin\Message\Command\ProcessFeed;
+use Symfony\Component\HttpFoundation\Exception\SessionNotFoundException;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\Session\Flash\FlashBag;
 use Symfony\Component\HttpFoundation\Session\Flash\FlashBagInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -24,13 +27,17 @@ final class ProcessFeedAction
     public function __construct(
         MessageBusInterface $commandBus,
         UrlGeneratorInterface $urlGenerator,
-        FlashBagInterface $flashBag,
+        RequestStack $requestStack,
         TranslatorInterface $translator
     ) {
         $this->commandBus = $commandBus;
         $this->urlGenerator = $urlGenerator;
-        $this->flashBag = $flashBag;
         $this->translator = $translator;
+        try {
+            $this->flashBag = $requestStack->getCurrentRequest()->getSession()->getFlashBag();
+        } catch (SessionNotFoundException $exception) {
+            $this->flashBag = new FlashBag();
+        }
     }
 
     public function __invoke(int $id): RedirectResponse
